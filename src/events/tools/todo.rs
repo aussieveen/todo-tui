@@ -19,10 +19,11 @@ pub fn handle_event(app: &mut App, event: AppEvent) {
 
         AppEvent::OpenEditPopup => {
             if let Some(idx) = app.state.selected_todo_index()
-                && let Some(todo) = app.state.todos.get(idx) {
-                    app.state.popup = PopupState::for_edit(idx, todo);
-                    app.state.focus = AppFocus::Popup;
-                }
+                && let Some(todo) = app.state.todos.get(idx)
+            {
+                app.state.popup = PopupState::for_edit(idx, todo);
+                app.state.focus = AppFocus::Popup;
+            }
         }
 
         AppEvent::NextField => {

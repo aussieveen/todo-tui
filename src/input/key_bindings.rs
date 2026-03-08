@@ -116,8 +116,9 @@ pub fn register_bindings(map: &mut KeyEventMap) {
 
 fn popup_char_input(key: KeyEvent) -> Option<AppEvent> {
     if let KeyCode::Char(c) = key.code
-        && (key.modifiers == KeyModifiers::NONE || key.modifiers == KeyModifiers::SHIFT) {
-            return Some(AppEvent::AddChar(c));
-        }
+        && (key.modifiers == KeyModifiers::NONE || key.modifiers == KeyModifiers::SHIFT)
+    {
+        return Some(AppEvent::AddChar(c));
+    }
     None
 }

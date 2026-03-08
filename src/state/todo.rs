@@ -50,10 +50,11 @@ impl Todo {
             rest = after_x;
             // Try to parse completion date
             if let Some((date_str, remainder)) = rest.split_once(' ')
-                && let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                    completion_date = Some(date);
-                    rest = remainder;
-                }
+                && let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+            {
+                completion_date = Some(date);
+                rest = remainder;
+            }
         }
 
         // Check for priority: "(A) "
@@ -71,10 +72,11 @@ impl Todo {
 
         // Try to parse creation date
         if let Some((date_str, remainder)) = rest.split_once(' ')
-            && let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                creation_date = Some(date);
-                rest = remainder;
-            }
+            && let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        {
+            creation_date = Some(date);
+            rest = remainder;
+        }
 
         let description = rest.to_string();
         let contexts = parse_tokens(&description, '@');
@@ -105,9 +107,10 @@ impl Todo {
         }
 
         if let Some(p) = self.priority
-            && !self.done {
-                parts.push(format!("({p})"));
-            }
+            && !self.done
+        {
+            parts.push(format!("({p})"));
+        }
 
         if let Some(date) = self.creation_date {
             parts.push(date.format("%Y-%m-%d").to_string());
