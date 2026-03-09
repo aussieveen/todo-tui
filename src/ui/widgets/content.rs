@@ -33,11 +33,29 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
         lines.push(render_todo_line(todo, is_dimmed));
     }
 
+    let total_lines = lines.len();
+    let vp = area.height.saturating_sub(2) as usize;
+    let offset = state.scroll_offset as usize;
+    let has_above = total_lines > vp && offset > 0;
+    let has_below = total_lines > offset + vp;
+
+    let title = match (has_above, has_below) {
+        (true, true) => " ↑ Todos ↓ ",
+        (true, false) => " ↑ Todos ",
+        (false, true) => " Todos ↓ ",
+        (false, false) => " Todos ",
+    };
+
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(block_border_style())
-        .title(" Todos ");
-    frame.render_widget(Paragraph::new(lines).block(block), area);
+        .title(title);
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(block)
+            .scroll((state.scroll_offset, 0)),
+        area,
+    );
 }
 
 fn priority_header(priority: Option<char>) -> Line<'static> {

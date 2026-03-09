@@ -72,6 +72,7 @@ impl App {
         let completed = self.state.todos.iter().filter(|t| t.done).count();
 
         widgets::header::render(frame, areas.header, pending, completed);
+        self.state.viewport_height = areas.content.height.saturating_sub(2);
         widgets::content::render(frame, areas.content, &self.state);
         widgets::footer::render(frame, areas.footer, self.state.focus);
 
