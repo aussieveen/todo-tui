@@ -70,6 +70,7 @@ pub fn handle_event(app: &mut App, event: AppEvent) {
                     app.state.todos.push(todo);
                     let last = app.state.selectable_count().saturating_sub(1);
                     app.state.selected = Some(last);
+                    app.state.scroll_to_reveal();
                 }
             }
 
@@ -106,6 +107,8 @@ pub fn handle_event(app: &mut App, event: AppEvent) {
 
         AppEvent::ToggleShowCompleted => {
             app.state.show_completed = !app.state.show_completed;
+            app.state.scroll_offset = 0;
+            app.state.clamp_selection();
         }
 
         AppEvent::IncreasePriority => {
@@ -119,6 +122,7 @@ pub fn handle_event(app: &mut App, event: AppEvent) {
                     .visible_todos()
                     .iter()
                     .position(|(i, _)| *i == idx);
+                app.state.scroll_to_reveal();
                 app.save();
             }
         }
@@ -133,6 +137,7 @@ pub fn handle_event(app: &mut App, event: AppEvent) {
                     .visible_todos()
                     .iter()
                     .position(|(i, _)| *i == idx);
+                app.state.scroll_to_reveal();
                 app.save();
             }
         }

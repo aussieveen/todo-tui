@@ -145,6 +145,8 @@ pub struct AppState {
     pub show_completed: bool,
     pub popup: PopupState,
     pub error: Option<String>,
+    pub scroll_offset: u16,
+    pub viewport_height: u16,
 }
 
 impl AppState {
@@ -156,6 +158,8 @@ impl AppState {
             show_completed: false,
             popup: PopupState::for_add(),
             error: None,
+            scroll_offset: 0,
+            viewport_height: 0,
         }
     }
 
@@ -196,6 +200,7 @@ impl AppState {
             Some(n) => Some(n - 1),
             None => None,
         };
+        self.scroll_to_reveal();
     }
 
     pub fn move_down(&mut self) {
@@ -208,6 +213,7 @@ impl AppState {
             None => 0,
             Some(n) => (n + 1).min(max),
         });
+        self.scroll_to_reveal();
     }
 
     /// Returns the original todos index for the currently selected item.
@@ -224,5 +230,50 @@ impl AppState {
         } else {
             self.selected.map(|n| n.min(count - 1))
         };
+        self.scroll_to_reveal();
     }
+
+    pub fn scroll_to_reveal(&mut self) {
+        let vp = self.viewport_height as usize;
+        if vp == 0 {
+            return;
+        }
+        let Some(pos) = self.selected else {
+            self.scroll_offset = 0;
+            return;
+        };
+        let visible = self.visible_todos();
+        let map = build_line_map(&visible);
+        let Some(&item_line) = map.get(pos) else {
+            return;
+        };
+        let offset = self.scroll_offset as usize;
+        if item_line >= offset + vp {
+            self.scroll_offset = (item_line + 1).saturating_sub(vp) as u16;
+        } else if item_line < offset {
+            self.scroll_offset = item_line as u16;
+        }
+    }
+}
+
+pub fn build_line_map(visible: &[(usize, &Todo)]) -> Vec<usize> {
+    let mut map = Vec::with_capacity(visible.len());
+    let mut line: usize = 0;
+    let mut last_group: Option<Option<char>> = None;
+    for (_, todo) in visible.iter() {
+        let group = match todo.priority {
+            Some('A'..='E') => todo.priority,
+            _ => None,
+        };
+        if last_group != Some(group) {
+            if last_group.is_some() {
+                line += 1; // blank separator
+            }
+            line += 1; // group header
+            last_group = Some(group);
+        }
+        map.push(line);
+        line += 1;
+    }
+    map
 }
