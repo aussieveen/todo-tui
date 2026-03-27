@@ -107,11 +107,10 @@ impl App {
             widgets::popup::render_error(frame, frame.area(), &msg.clone());
         }
 
-        if self.state.focus == AppFocus::SyncConflict {
-            if let Some(conflict) = &self.state.conflict {
+        if self.state.focus == AppFocus::SyncConflict
+            && let Some(conflict) = &self.state.conflict {
                 widgets::conflict::render(frame, frame.area(), conflict);
             }
-        }
     }
 
     fn handle_key(&mut self, key: crossterm::event::KeyEvent) {
