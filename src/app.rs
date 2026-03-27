@@ -1,5 +1,6 @@
 use crossterm::event::{Event as CrosstermEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
+use tokio::sync::mpsc;
 
 use crate::{
     events::{
@@ -11,6 +12,7 @@ use crate::{
     input::{key_bindings::register_bindings, key_context::KeyContext, key_event_map::KeyEventMap},
     persistence::Persister,
     state::app::{AppFocus, AppState},
+    sync::{SyncParams, SyncStatus, task::SyncTask},
     ui::{layout, widgets},
 };
 
@@ -20,11 +22,15 @@ pub struct App {
     event_handler: EventHandler,
     pub(crate) event_sender: EventSender,
     key_event_map: KeyEventMap,
-    persister: Persister,
+    pub(crate) persister: Persister,
+    /// Channel to send serialised content to the background sync task for upload.
+    pub(crate) push_tx: Option<mpsc::UnboundedSender<String>>,
+    /// Sync task parameters, consumed once on the first call to run().
+    sync_params: Option<SyncParams>,
 }
 
 impl App {
-    pub fn new(persister: Persister) -> Self {
+    pub fn new(persister: Persister, sync_params: Option<SyncParams>) -> Self {
         let event_handler = EventHandler::new();
         let event_sender = event_handler.sender();
         Self {
@@ -34,11 +40,28 @@ impl App {
             event_sender,
             key_event_map: KeyEventMap::default(),
             persister,
+            push_tx: None,
+            sync_params,
         }
     }
 
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
         register_bindings(&mut self.key_event_map);
+
+        // Spawn the background sync task now that we have event_sender.
+        if let Some(params) = self.sync_params.take() {
+            let (push_tx, push_rx) = mpsc::unbounded_channel::<String>();
+            self.push_tx = Some(push_tx);
+            self.state.sync_status = SyncStatus::Idle;
+            SyncTask::spawn(
+                params.drive,
+                params.todo_dir,
+                params.file_id,
+                self.event_sender.clone(),
+                push_rx,
+                params.interval,
+            );
+        }
 
         // Load todos from disk on startup
         match self.persister.load() {
@@ -74,7 +97,7 @@ impl App {
         widgets::header::render(frame, areas.header, pending, completed);
         self.state.viewport_height = areas.content.height.saturating_sub(2);
         widgets::content::render(frame, areas.content, &self.state);
-        widgets::footer::render(frame, areas.footer, self.state.focus);
+        widgets::footer::render(frame, areas.footer, &self.state);
 
         if self.state.focus == AppFocus::Popup {
             widgets::popup::render(frame, frame.area(), &self.state.popup);
@@ -82,6 +105,12 @@ impl App {
 
         if let Some(msg) = &self.state.error {
             widgets::popup::render_error(frame, frame.area(), &msg.clone());
+        }
+
+        if self.state.focus == AppFocus::SyncConflict {
+            if let Some(conflict) = &self.state.conflict {
+                widgets::conflict::render(frame, frame.area(), conflict);
+            }
         }
     }
 
@@ -104,6 +133,9 @@ impl App {
             AppFocus::Popup => {
                 stack.push(KeyContext::Popup);
             }
+            AppFocus::SyncConflict => {
+                stack.push(KeyContext::SyncConflict);
+            }
             AppFocus::Main => {
                 stack.push(KeyContext::Main);
             }
@@ -113,10 +145,15 @@ impl App {
         stack
     }
 
-    /// Persist current todos, emitting a SaveError event on failure.
+    /// Persist current todos locally and trigger a Drive push if sync is enabled.
     pub(crate) fn save(&self) {
         if let Err(e) = self.persister.save(&self.state.todos) {
             self.event_sender.send(AppEvent::SaveError(e.to_string()));
+            return;
+        }
+        if let Some(tx) = &self.push_tx {
+            let content = Persister::serialise(&self.state.todos);
+            let _ = tx.send(content);
         }
     }
 }

@@ -45,7 +45,7 @@ pub fn register_bindings(map: &mut KeyEventMap) {
     );
     map.add_static(
         Main,
-        KeyCode::Char('n'),
+        KeyCode::Char('a'),
         KeyModifiers::NONE,
         AppEvent::OpenAddPopup,
     );
@@ -85,6 +85,20 @@ pub fn register_bindings(map: &mut KeyEventMap) {
         KeyModifiers::NONE,
         AppEvent::ToggleShowCompleted,
     );
+    // --- Sync conflict ---
+    map.add_static(
+        SyncConflict,
+        KeyCode::Char('d'),
+        KeyModifiers::NONE,
+        AppEvent::AcceptDriveVersion,
+    );
+    map.add_static(
+        SyncConflict,
+        KeyCode::Char('l'),
+        KeyModifiers::NONE,
+        AppEvent::KeepLocalVersion,
+    );
+
     // --- Popup ---
     map.add_static(
         Popup,

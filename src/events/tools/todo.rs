@@ -1,8 +1,9 @@
 use crate::{
     app::App,
     events::event::AppEvent,
+    persistence::Persister,
     state::{
-        app::{AppFocus, PopupState},
+        app::{AppFocus, ConflictState, PopupState},
         todo::Todo,
     },
 };
@@ -140,6 +141,45 @@ pub fn handle_event(app: &mut App, event: AppEvent) {
                 app.state.scroll_to_reveal();
                 app.save();
             }
+        }
+
+        AppEvent::DriveUpdated(raw) => {
+            app.state.todos = Persister::parse_content(&raw);
+            if let Err(e) = app.persister.write_raw(&raw) {
+                app.event_sender.send(AppEvent::SaveError(e.to_string()));
+            }
+            let _ = app.persister.save_base(&raw);
+        }
+
+        AppEvent::SyncConflict { local_content, drive_content } => {
+            let _ = app.persister.log_conflict(&local_content, &drive_content);
+            app.state.conflict = Some(ConflictState { local_content, drive_content });
+            app.state.focus = AppFocus::SyncConflict;
+        }
+
+        AppEvent::AcceptDriveVersion => {
+            if let Some(conflict) = app.state.conflict.take() {
+                app.state.todos = Persister::parse_content(&conflict.drive_content);
+                if let Err(e) = app.persister.write_raw(&conflict.drive_content) {
+                    app.event_sender.send(AppEvent::SaveError(e.to_string()));
+                }
+                let _ = app.persister.save_base(&conflict.drive_content);
+            }
+            app.state.focus = AppFocus::Main;
+        }
+
+        AppEvent::KeepLocalVersion => {
+            if let Some(conflict) = app.state.conflict.take() {
+                let _ = app.persister.save_base(&conflict.local_content);
+                if let Some(tx) = &app.push_tx {
+                    let _ = tx.send(conflict.local_content);
+                }
+            }
+            app.state.focus = AppFocus::Main;
+        }
+
+        AppEvent::SyncStatusUpdate(status) => {
+            app.state.sync_status = status;
         }
 
         AppEvent::SaveError(msg) => {

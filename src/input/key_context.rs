@@ -6,6 +6,8 @@ pub enum KeyContext {
     Popup,
     /// Error overlay is active.
     ErrorPopup,
+    /// Sync conflict resolution overlay is active.
+    SyncConflict,
     /// Always-active bindings.
     Global,
 }
