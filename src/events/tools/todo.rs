@@ -151,9 +151,15 @@ pub fn handle_event(app: &mut App, event: AppEvent) {
             let _ = app.persister.save_base(&raw);
         }
 
-        AppEvent::SyncConflict { local_content, drive_content } => {
+        AppEvent::SyncConflict {
+            local_content,
+            drive_content,
+        } => {
             let _ = app.persister.log_conflict(&local_content, &drive_content);
-            app.state.conflict = Some(ConflictState { local_content, drive_content });
+            app.state.conflict = Some(ConflictState {
+                local_content,
+                drive_content,
+            });
             app.state.focus = AppFocus::SyncConflict;
         }
 

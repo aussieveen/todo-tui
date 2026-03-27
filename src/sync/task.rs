@@ -5,7 +5,7 @@ use tokio::{sync::mpsc, task::JoinHandle, time};
 
 use crate::events::{event::AppEvent, sender::EventSender};
 
-use super::{drive::DriveClient, SyncStatus};
+use super::{SyncStatus, drive::DriveClient};
 
 pub struct SyncTask;
 
@@ -137,7 +137,10 @@ async fn poll(
 
     match (local_changed, drive_changed) {
         (false, false) => Ok(PollResult::NoChange(drive_time)),
-        (false, true) => Ok(PollResult::Updated { drive_content, drive_time }),
+        (false, true) => Ok(PollResult::Updated {
+            drive_content,
+            drive_time,
+        }),
         (true, false) => Ok(PollResult::LocalAhead),
         (true, true) => Ok(PollResult::Conflict {
             local_content,

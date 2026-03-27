@@ -62,9 +62,19 @@ pub fn render(frame: &mut Frame, area: Rect, conflict: &ConflictState) {
 
     // Key hints
     let hints = Paragraph::new(Line::from(vec![
-        Span::styled(" [d] ", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [d] ",
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("Use Drive version    "),
-        Span::styled(" [l] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [l] ",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("Keep local"),
     ]))
     .alignment(Alignment::Center);

@@ -30,18 +30,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState) {
             hint("Esc", "cancel"),
         ],
         AppFocus::ErrorPopup => vec![hint("d/Esc", "dismiss")],
-        AppFocus::SyncConflict => vec![
-            hint("d", "use Drive version"),
-            hint("l", "keep local"),
-        ],
+        AppFocus::SyncConflict => vec![hint("d", "use Drive version"), hint("l", "keep local")],
     };
 
     // Append sync status indicator
     if let Some(status_span) = sync_status_span(&state.sync_status) {
-        hints.push(Line::from(vec![
-            Span::raw("  "),
-            status_span,
-        ]));
+        hints.push(Line::from(vec![Span::raw("  "), status_span]));
     }
 
     let available = area.width as usize;

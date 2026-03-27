@@ -11,12 +11,7 @@ use std::time::Duration;
 
 use app::App;
 use persistence::Persister;
-use sync::{
-    SyncParams, SyncStatus,
-    auth::TokenStore,
-    config::SyncConfig,
-    drive::DriveClient,
-};
+use sync::{SyncParams, SyncStatus, auth::TokenStore, config::SyncConfig, drive::DriveClient};
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {

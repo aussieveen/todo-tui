@@ -81,7 +81,11 @@ impl TokenStore {
         self.authorize(http).await
     }
 
-    async fn refresh(&mut self, http: &reqwest::Client, refresh_token: &str) -> Result<String, String> {
+    async fn refresh(
+        &mut self,
+        http: &reqwest::Client,
+        refresh_token: &str,
+    ) -> Result<String, String> {
         let params = [
             ("client_id", self.client_id.as_str()),
             ("client_secret", self.client_secret.as_str()),
@@ -129,7 +133,9 @@ impl TokenStore {
         io::stdout().flush().ok();
 
         let mut code = String::new();
-        io::stdin().read_line(&mut code).map_err(|e| e.to_string())?;
+        io::stdin()
+            .read_line(&mut code)
+            .map_err(|e| e.to_string())?;
         let code = code.trim().to_string();
 
         let params = [

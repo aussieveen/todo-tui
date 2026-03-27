@@ -99,9 +99,7 @@ impl Persister {
         let timestamp = Local::now().format("%Y%m%d-%H%M%S");
         let path = conflicts_dir.join(format!("{timestamp}.txt"));
 
-        let content = format!(
-            "=== LOCAL VERSION ===\n{local}\n\n=== DRIVE VERSION ===\n{drive}\n"
-        );
+        let content = format!("=== LOCAL VERSION ===\n{local}\n\n=== DRIVE VERSION ===\n{drive}\n");
         fs::write(path, content).map_err(|e| AppError::Save(e.to_string()))
     }
 }
