@@ -108,9 +108,10 @@ impl App {
         }
 
         if self.state.focus == AppFocus::SyncConflict
-            && let Some(conflict) = &self.state.conflict {
-                widgets::conflict::render(frame, frame.area(), conflict);
-            }
+            && let Some(conflict) = &self.state.conflict
+        {
+            widgets::conflict::render(frame, frame.area(), conflict);
+        }
     }
 
     fn handle_key(&mut self, key: crossterm::event::KeyEvent) {
