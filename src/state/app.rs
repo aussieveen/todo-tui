@@ -1,3 +1,5 @@
+use crate::sync::SyncStatus;
+
 use super::todo::Todo;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -5,6 +7,13 @@ pub enum AppFocus {
     Main,
     Popup,
     ErrorPopup,
+    SyncConflict,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConflictState {
+    pub local_content: String,
+    pub drive_content: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -147,6 +156,8 @@ pub struct AppState {
     pub error: Option<String>,
     pub scroll_offset: u16,
     pub viewport_height: u16,
+    pub sync_status: SyncStatus,
+    pub conflict: Option<ConflictState>,
 }
 
 impl AppState {
@@ -160,6 +171,8 @@ impl AppState {
             error: None,
             scroll_offset: 0,
             viewport_height: 0,
+            sync_status: SyncStatus::NotConfigured,
+            conflict: None,
         }
     }
 

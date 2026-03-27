@@ -1,5 +1,7 @@
 use crossterm::event::Event as CrosstermEvent;
 
+use crate::sync::SyncStatus;
+
 #[derive(Debug, Clone)]
 pub enum Event {
     Tick,
@@ -7,7 +9,7 @@ pub enum Event {
     App(AppEvent),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum AppEvent {
     // Navigation
     MoveUp,
@@ -28,6 +30,15 @@ pub enum AppEvent {
     ToggleShowCompleted,
     IncreasePriority,
     DecreasePriority,
+    // Drive sync
+    DriveUpdated(String),
+    SyncConflict {
+        local_content: String,
+        drive_content: String,
+    },
+    SyncStatusUpdate(SyncStatus),
+    AcceptDriveVersion,
+    KeepLocalVersion,
     // System
     SaveError(String),
     DismissError,

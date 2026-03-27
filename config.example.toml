@@ -1,0 +1,5 @@
+[drive]
+enabled = false
+sync_interval_secs = 30
+file_id = ""
+credentials_path = "credentials.json"
