@@ -12,9 +12,18 @@ struct FileListResponse {
     files: Vec<FileMeta>,
 }
 
+/// Used in file list responses where both id and modifiedTime are requested.
 #[derive(Debug, Deserialize)]
 struct FileMeta {
     id: String,
+    #[allow(dead_code)]
+    #[serde(rename = "modifiedTime")]
+    modified_time: Option<DateTime<Utc>>,
+}
+
+/// Used in single-file metadata requests where only modifiedTime is requested.
+#[derive(Deserialize)]
+struct ModifiedTimeMeta {
     #[serde(rename = "modifiedTime")]
     modified_time: Option<DateTime<Utc>>,
 }
@@ -129,7 +138,7 @@ impl DriveClient {
             return Err(format!("Drive metadata failed ({status}): {body}"));
         }
 
-        let meta: FileMeta = resp.json().await.map_err(|e| e.to_string())?;
+        let meta: ModifiedTimeMeta = resp.json().await.map_err(|e| e.to_string())?;
         meta.modified_time
             .ok_or_else(|| "Drive metadata: missing modifiedTime".to_string())
     }
