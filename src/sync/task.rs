@@ -84,10 +84,12 @@ impl SyncTask {
                             Ok(PollResult::Conflict { local_content, drive_content, drive_time }) => {
                                 last_known_drive_time = Some(drive_time);
                                 event_sender.send(AppEvent::SyncConflict { local_content, drive_content });
+                                event_sender.send(AppEvent::SyncStatusUpdate(SyncStatus::Synced(drive_time)));
                             }
                             Ok(PollResult::LocalAhead) => {
-                                // Local has changes; push was not triggered (e.g. file edited externally).
-                                // Nothing to do — the next user save will push.
+                                // Local has unsaved changes; the next user save will push.
+                                // Still reachable — clear Syncing so status doesn't get stuck.
+                                event_sender.send(AppEvent::SyncStatusUpdate(SyncStatus::Idle));
                             }
                             Err(_) => {
                                 event_sender.send(AppEvent::SyncStatusUpdate(SyncStatus::Offline));
@@ -159,6 +161,8 @@ async fn push(
     drive.upload(file_id, content).await?;
     // Update the base so future conflict detection knows both sides are in sync.
     std::fs::write(base_path, content).map_err(|e| e.to_string())?;
-    // Return the new modifiedTime from Drive so our poll cursor is up to date.
-    drive.get_modified_time(file_id).await
+    // Use local time as the cursor — avoids a second round-trip that could
+    // falsely report Offline after an otherwise successful upload.
+    // The next poll will fetch the real Drive modifiedTime.
+    Ok(Utc::now())
 }
