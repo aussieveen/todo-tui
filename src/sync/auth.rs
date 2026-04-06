@@ -155,7 +155,10 @@ impl TokenStore {
         let html = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\
             <html><body><h2>Authentication successful</h2>\
             <p>You can close this tab.</p></body></html>";
-        stream.write_all(html.as_bytes()).await.map_err(|e| e.to_string())?;
+        stream
+            .write_all(html.as_bytes())
+            .await
+            .map_err(|e| e.to_string())?;
 
         let params = [
             ("client_id", self.client_id.as_str()),
@@ -216,7 +219,11 @@ fn urlencoded(s: &str) -> String {
 fn extract_code(query: &str) -> Option<String> {
     query.split('&').find_map(|pair| {
         let (k, v) = pair.split_once('=')?;
-        if k == "code" { Some(url_decode(v)) } else { None }
+        if k == "code" {
+            Some(url_decode(v))
+        } else {
+            None
+        }
     })
 }
 
