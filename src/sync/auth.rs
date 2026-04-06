@@ -1,9 +1,10 @@
 use std::{
     fs,
-    io::{self, Write},
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use serde::{Deserialize, Serialize};
 
@@ -120,30 +121,48 @@ impl TokenStore {
     }
 
     async fn authorize(&mut self, http: &reqwest::Client) -> Result<String, String> {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .map_err(|e| format!("Failed to bind local port: {e}"))?;
+        let port = listener.local_addr().map_err(|e| e.to_string())?.port();
+        let redirect_uri = format!("http://localhost:{port}/callback");
+
         let auth_url = format!(
-            "{AUTH_URL}?client_id={}&redirect_uri=urn:ietf:wg:oauth:2.0:oob\
-             &response_type=code&scope={}&access_type=offline&prompt=consent",
+            "{AUTH_URL}?client_id={}&redirect_uri={}&response_type=code\
+             &scope={}&access_type=offline&prompt=consent",
             urlencoded(&self.client_id),
+            urlencoded(&redirect_uri),
             urlencoded(DRIVE_SCOPE),
         );
 
         eprintln!("\n=== Google Drive authorisation required ===");
-        eprintln!("Open this URL in your browser:\n\n  {auth_url}\n");
-        eprint!("Paste the authorisation code here: ");
-        io::stdout().flush().ok();
+        eprintln!("Opening browser for authorisation...");
+        eprintln!("If the browser does not open, visit:\n\n  {auth_url}\n");
+        let _ = tokio::process::Command::new("xdg-open")
+            .arg(&auth_url)
+            .spawn();
 
-        let mut code = String::new();
-        io::stdin()
-            .read_line(&mut code)
-            .map_err(|e| e.to_string())?;
-        let code = code.trim().to_string();
+        let (mut stream, _) = listener.accept().await.map_err(|e| e.to_string())?;
+
+        let mut buf = [0u8; 4096];
+        let n = stream.read(&mut buf).await.map_err(|e| e.to_string())?;
+        let request = String::from_utf8_lossy(&buf[..n]);
+        let first_line = request.lines().next().unwrap_or("");
+        let path = first_line.split_whitespace().nth(1).unwrap_or("");
+        let query = path.split_once('?').map(|(_, q)| q).unwrap_or("");
+        let code = extract_code(query).ok_or("No authorisation code in callback")?;
+
+        let html = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\
+            <html><body><h2>Authentication successful</h2>\
+            <p>You can close this tab.</p></body></html>";
+        stream.write_all(html.as_bytes()).await.map_err(|e| e.to_string())?;
 
         let params = [
             ("client_id", self.client_id.as_str()),
             ("client_secret", self.client_secret.as_str()),
             ("code", code.as_str()),
             ("grant_type", "authorization_code"),
-            ("redirect_uri", "urn:ietf:wg:oauth:2.0:oob"),
+            ("redirect_uri", redirect_uri.as_str()),
         ];
         let resp: serde_json::Value = http
             .post(TOKEN_URL)
@@ -192,4 +211,34 @@ fn urlencoded(s: &str) -> String {
             _ => format!("%{:02X}", c as u8),
         })
         .collect()
+}
+
+fn extract_code(query: &str) -> Option<String> {
+    query.split('&').find_map(|pair| {
+        let (k, v) = pair.split_once('=')?;
+        if k == "code" { Some(url_decode(v)) } else { None }
+    })
+}
+
+fn url_decode(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '+' => result.push(' '),
+            '%' => {
+                let h1 = chars.next().unwrap_or('0');
+                let h2 = chars.next().unwrap_or('0');
+                if let Ok(byte) = u8::from_str_radix(&format!("{h1}{h2}"), 16) {
+                    result.push(byte as char);
+                } else {
+                    result.push('%');
+                    result.push(h1);
+                    result.push(h2);
+                }
+            }
+            _ => result.push(c),
+        }
+    }
+    result
 }
